@@ -105,7 +105,7 @@
 			mainGroup = 9C31DA6A779456B1C8CB740A;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				2454178E452AC09FA849154E /* XCLocalSwiftPackageReference "../..//" */,
+				9722714FBD8B902E2B231FA6 /* XCLocalSwiftPackageReference "../../../TCAlight" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A52B0BE5210CB605C9E9C8EA /* Products */;
@@ -312,9 +312,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		2454178E452AC09FA849154E /* XCLocalSwiftPackageReference "../..//" */ = {
+		9722714FBD8B902E2B231FA6 /* XCLocalSwiftPackageReference "../../../TCAlight" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = "../..//";
+			relativePath = ../../../TCAlight;
 		};
 /* End XCLocalSwiftPackageReference section */
 

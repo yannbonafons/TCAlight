@@ -18,25 +18,25 @@ let package = Package(
     targets: [
         .target(
             name: "TCAlight",
-            plugins: [
-                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLint")
-            ],
             swiftSettings: [
                 .enableExperimentalFeature("ApproachableConcurrency"),
                 .defaultIsolation(MainActor.self),
                 .swiftLanguageMode(.v6)
+            ],
+            plugins: [
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLint")
             ]
         ),
         .testTarget(
             name: "TCAlightTests",
             dependencies: ["TCAlight"],
-            plugins: [
-                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLint")
-            ],
             swiftSettings: [
                 .enableExperimentalFeature("ApproachableConcurrency"),
                 .defaultIsolation(MainActor.self),
                 .swiftLanguageMode(.v6)
+            ],
+            plugins: [
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLint")
             ]
         ),
     ]

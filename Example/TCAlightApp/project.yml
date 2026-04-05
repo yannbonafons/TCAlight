@@ -19,4 +19,4 @@ targets:
       - package: TCAlight
 packages:
   TCAlight:
-    path: ../../
+    path: ../../../TCAlight
