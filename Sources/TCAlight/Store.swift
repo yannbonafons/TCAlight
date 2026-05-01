@@ -14,6 +14,7 @@ public final class Store<State: StateWithActionProtocol> {
     // MARK: - Private Properties
     private let subject: CurrentValueSubject<State, Never>
     private var cancellables: Set<AnyCancellable> = []
+    private let identifier = UUID()
 
     // MARK: - Public Properties
     /// The current state snapshot.
@@ -97,5 +98,16 @@ public final class Store<State: StateWithActionProtocol> {
             return
         }
         subject.send(newState)
+    }
+}
+
+@MainActor
+extension Store: Hashable {
+    public static func == (lhs: Store<State>, rhs: Store<State>) -> Bool {
+        lhs.identifier == rhs.identifier
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(identifier)
     }
 }
