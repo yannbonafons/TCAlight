@@ -22,29 +22,34 @@ public enum LoadableState<LoadableType: StateWithActionProtocol>: StateWithActio
     /// The current value when available.
     public var value: LoadableType? {
         switch self {
-        case let .loaded(value): return value
-        case let .loading(last): return last
-        default: return nil
+        case let .loaded(value):
+            value
+        case let .loading(last):
+            last
+        default:
+            nil
         }
     }
     
     /// `true` when the state is currently `.loaded`.
     public var isLoaded: Bool {
         if case .loaded = self {
-            return true
+            true
+        } else {
+            false
         }
-        return false
     }
 
     public static nonisolated func == (lhs: LoadableState<LoadableType>, rhs: LoadableState<LoadableType>) -> Bool {
         switch (lhs, rhs) {
         case (.idle, .idle):
-            return true
+            true
         case let (.loading(lhs), .loading(rhs)):
-            return lhs == rhs
+            lhs == rhs
         case let (.loaded(lhsV), .loaded(rhsV)):
-            return lhsV == rhsV
-        default: return false
+            lhsV == rhsV
+        default:
+            false
         }
     }
     
