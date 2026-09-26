@@ -54,11 +54,27 @@ Example/TCAlightApp/           # Demo app (Xcode project via project.yml)
 - `otherAction` applies inner reducer only when a value exists
 - Loading cancellation/fallback is handled in reducer transitions
 
+### DataModel / DTO
+
+- `DataModel`: the type the app manipulates; `Equatable, Hashable`; initialized via `init(dto:)`; exposes computed `dto`
+- `DTO`: mirrors the API/storage payload; `Codable, Sendable`; initialized via `init(dataModel:)`; exposes computed `dataModel`
+- Constraint symmetry (`Self == Self.DTOType.DataModelType` and reverse) ties each `DataModel` to exactly one `DTO`
+- `Array` and `Optional` conditionally conform to `DataModel`/`DTO` when their `Element`/`Wrapped` does, propagating conversions through collections and optionals
+
+### PersistableState
+
+- Conform a `State` to `PersistableState` to make it persistable; requires `DataModelType: DataModel`, a `var dataModel`, and a `storageKey`
+- `persistData()` saves; `getSavedData() async throws -> DataModelType?` loads; `deleteSavedData()` removes it
+- No storage backend is provided by the module — conformers implement save/load/delete themselves (e.g. `UserDefaults`, `FileManager`), encoding/decoding through `persistedDTO`
+- `canBePersisted` (default `true`), `canBeAutoloaded` (default `false`), `canRetrieveSavedData` (default `true`) are conformer-overridable flags; the module does not act on them itself
+- `Store.loadState()` (available when `State: PersistableState`) reads the saved data model and publishes it into the store when present; a no-op otherwise
+
 ### Current limitations
 
 - No effect system yet (no async side-effect orchestration inside store)
 - No scoped action routing from child to parent reducer (substore sync only)
-- Test coverage is currently minimal (`Tests/TCAlightTests` scaffold only)
+- No built-in storage backend for `PersistableState` (save/load/delete are conformer-provided)
+- No automatic autoload-on-foreground wiring for `PersistableState` (flag exists, logic is app-provided)
 
 ### Access Control Convention
 
@@ -92,3 +108,5 @@ Example/TCAlightApp/           # Demo app (Xcode project via project.yml)
   2. `Store.trigger` multi-action sequencing
   3. `getSubStore` two-way synchronization without feedback loops
   4. `LoadableState` transition matrix (`idle/loading/loaded`)
+  5. `DataModel`/`DTO` round-trip conversions, including `Array` and `Optional` conditional conformances
+  6. `PersistableState` defaults and `Store.loadState()` (save/load/delete round trip, no-op when nothing saved, observer notification)

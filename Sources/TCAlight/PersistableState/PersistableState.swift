@@ -13,15 +13,15 @@ public protocol PersistableState {
     var dataModel: DataModelType { get set }
     /// Provide the key to save and load data
     var storageKey: String { get }
-    /// Data can be saved (ie getSavedData will do something)
+    /// Data can be saved (ie `persistData` will do something)
     var canBePersisted: Bool { get }
     /// Data should be loaded when app enter foreground (logic is not providedin the module)
     var canBeAutoloaded: Bool { get }
-    /// Data can be retrived (ie getSavedData can return a value)
+    /// Data can be retrived (ie `getSavedData can return a value)
     var canRetrieveSavedData: Bool { get }
     
     /// Save the Data. Use persistedDTO which is codable
-    func getSavedData() async throws
+    func persistData() async throws
     /// Retrieve the saved data. It should be a dto so use the computed dataModel
     func getSavedData() async throws -> DataModelType?
     /// Delete the saved data
