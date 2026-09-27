@@ -1,11 +1,13 @@
 import Testing
 import Combine
 import Dispatch
+import Foundation
 @testable import TCAlight
 
 // MARK: - Test Fixtures
 private nonisolated struct CounterState: StateWithActionProtocol {
     typealias ActionType = CounterAction
+    
     var count = 0
 }
 
@@ -29,6 +31,7 @@ private nonisolated enum CounterAction: ActionProtocol {
 
 private nonisolated struct ParentState: StateWithActionProtocol {
     typealias ActionType = ParentAction
+    
     var child = CounterState()
     var label: String = ""
 }
@@ -46,7 +49,6 @@ private nonisolated enum ParentAction: ActionProtocol {
 }
 
 // MARK: - Store Tests
-
 @MainActor
 @Suite("Store")
 struct StoreTests {
@@ -124,7 +126,6 @@ struct StoreTests {
 }
 
 // MARK: - Reducer Determinism Tests
-
 @MainActor
 @Suite("Reducer")
 struct ReducerTests {
@@ -153,7 +154,6 @@ struct ReducerTests {
 }
 
 // MARK: - SubStore Tests
-
 @MainActor
 @Suite("SubStore")
 struct SubStoreTests {
@@ -308,7 +308,6 @@ struct LoadableStateTests {
 }
 
 // MARK: - LoadableAction Reducer Tests
-
 @MainActor
 @Suite("LoadableAction Reducer")
 struct LoadableActionReducerTests {

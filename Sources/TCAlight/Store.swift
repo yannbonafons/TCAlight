@@ -9,7 +9,6 @@ import Foundation
 import Combine
 
 /// Main state container that applies actions and publishes state updates.
-@MainActor
 public final class Store<State: StateWithActionProtocol> {
     // MARK: - Private Properties
     private let subject: CurrentValueSubject<State, Never>
@@ -51,7 +50,7 @@ public final class Store<State: StateWithActionProtocol> {
     /// Applies one or more actions sequentially and publishes the final state if it changed.
     /// - Parameter actions: Actions to apply in order.
     public func trigger(_ actions: State.ActionType...) {
-        var currentState = subject.value
+        var currentState = state
         for action in actions {
             State.ActionType.reducer(state: &currentState, with: action)
         }
@@ -82,7 +81,7 @@ public final class Store<State: StateWithActionProtocol> {
                 guard let self else {
                     return
                 }
-                var current = subject.value
+                var current = state
                 current[keyPath: stateKeyPath] = newSub
                 send(current)
             }
@@ -94,14 +93,13 @@ public final class Store<State: StateWithActionProtocol> {
     // MARK: - Private functions
     /// Trigger an update only if `newValue` if differente from current `subject.value`
     private func send(_ newState: State) {
-        guard subject.value != newState else {
+        guard state != newState else {
             return
         }
         subject.send(newState)
     }
 }
 
-@MainActor
 extension Store: Hashable {
     public static func == (lhs: Store<State>, rhs: Store<State>) -> Bool {
         lhs.identifier == rhs.identifier
@@ -109,5 +107,17 @@ extension Store: Hashable {
     
     public func hash(into hasher: inout Hasher) {
         hasher.combine(identifier)
+    }
+}
+
+extension Store where State: PersistableState {
+    /// Use this function to load a saved data into your State. Will trigger the observation. Nothing will happen if no data has been saved
+    public func loadState() async {
+        guard let savedDataModel = try? await state.getSavedData() else {
+            return
+        }
+        var currentState = state
+        currentState.dataModel = savedDataModel
+        send(currentState)
     }
 }
