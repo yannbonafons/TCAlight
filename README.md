@@ -14,7 +14,7 @@ Lightweight state container inspired by TCA.
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/yannbonafons/TCAlight", from: "1.0.0")
+    .package(url: "https://github.com/yannbonafons/TCAlight", from: "2.1.0")
 ]
 ```
 
