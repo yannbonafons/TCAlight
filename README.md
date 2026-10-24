@@ -60,6 +60,48 @@ store.trigger(.increment)
 store.trigger(.increment, .decrement)
 ```
 
+Observations only emit when the observed value changes. Keep the returned `AnyCancellable` to
+keep receiving updates.
+
+### Observing a part of the state
+
+Pass a key path to only be notified when that part of the state changes. Updates of other
+properties are ignored:
+
+```swift
+struct ParentState: StateWithActionProtocol {
+    typealias ActionType = ParentAction
+    var child = CounterState()
+    var label = ""
+}
+
+let parentStore = Store(ParentState())
+
+// Not called when `child` changes
+let labelCancellable = parentStore.observe(\.label) { label in
+    print("label:", label)
+}
+
+// Optionally deliver updates on a specific queue
+let countCancellable = parentStore.observe(\.child.count, on: .main) { count in
+    print("count:", count)
+}
+```
+
+### Substores
+
+`getSubStore(_:)` creates a store scoped to a child state, kept in sync with its parent in both
+directions:
+
+```swift
+let childStore = parentStore.getSubStore(\.child)
+childStore.trigger(.increment) // parentStore.state.child.count == 1
+```
+
+A substore owns its synchronization subscriptions and releases them when it is deallocated, so
+calling `getSubStore` from several screens is safe. A substore keeps its parent alive for as
+long as it exists.
+
 Use `LoadableState` for async lifecycle:
 
 ```swift

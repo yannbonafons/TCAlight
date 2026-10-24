@@ -37,7 +37,9 @@ Example/TCAlightApp/           # Demo app (Xcode project via project.yml)
 - `Store<State>` is a `@MainActor` class built on `CurrentValueSubject<State, Never>`
 - Read current state through `state`
 - Mutate state through `trigger(_ actions: State.ActionType...)`
-- Observe updates with `observe(on:_:)`, with duplicate filtering (`removeDuplicates()`)
+- Observe a part of the state with `observe(_ keyPath:on:_:)` (`Value: Equatable`): emits only when the observed value changes, so updates of other parts of the state are ignored
+- Observe the whole state with `observe(on:_:)`, which forwards to `observe(\.self, on:_:)`
+- Both observations emit the current value on subscription, deduplicate with `removeDuplicates()`, and optionally deliver on a `DispatchQueue`
 - `send(_:)` only emits when the new state differs from the current one
 
 ### Substore model
@@ -46,6 +48,8 @@ Example/TCAlightApp/           # Demo app (Xcode project via project.yml)
 - Parent -> child updates are mapped and deduplicated
 - Child -> parent updates are merged back into root state
 - Synchronization relies on `Equatable` to avoid unnecessary emissions
+- Both synchronization subscriptions are owned by the substore (`subStore.cancellables`) and released with it; the parent never references its substores, so calling `getSubStore` repeatedly does not accumulate subscriptions
+- A substore captures its parent strongly: the parent stays alive while any substore exists (no retain cycle), preventing a detached substore from silently losing updates
 
 ### Loadable feature
 
@@ -103,10 +107,11 @@ Example/TCAlightApp/           # Demo app (Xcode project via project.yml)
 ## Testing expectations
 
 - Use `import Testing` and `@Test`
+- Run tests on an iOS simulator: `xcodebuild test -scheme TCAlight -destination 'platform=iOS Simulator,name=iPhone 17' -skipPackagePluginValidation` (`swift test` fails on macOS because of the SwiftLint plugin's platform requirement; the example app scheme has no tests)
 - Priority test areas:
   1. Reducer determinism and idempotence
-  2. `Store.trigger` multi-action sequencing
-  3. `getSubStore` two-way synchronization without feedback loops
+  2. `Store.trigger` multi-action sequencing, and key path observation (no emission when another part of the state changes)
+  3. `getSubStore` two-way synchronization without feedback loops, and substore lifecycle (substore released when unreferenced, parent kept alive by substores)
   4. `LoadableState` transition matrix (`idle/loading/loaded`)
   5. `DataModel`/`DTO` round-trip conversions, including `Array` and `Optional` conditional conformances
   6. `PersistableState` defaults and `Store.loadState()` (save/load/delete round trip, no-op when nothing saved, observer notification)
