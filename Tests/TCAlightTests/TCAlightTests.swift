@@ -123,6 +123,71 @@ struct StoreTests {
         #expect(receivedOnQueue)
         _ = cancellable
     }
+
+    // MARK: KeyPath observation
+
+    @Test("Observing a key path ignores updates of other parts of the state")
+    func observeKeyPathIgnoresSiblingUpdates() {
+        let store = Store(ParentState())
+        let child = store.getSubStore(\.child)
+        var received: [String] = []
+        let cancellable = store.observe(\.label) { received.append($0) }
+
+        child.trigger(.increment)
+        child.trigger(.set(10))
+
+        #expect(store.state.child.count == 10)
+        #expect(received == [""])
+        _ = cancellable
+    }
+
+    @Test("Observing a child key path ignores updates of the parent's other properties")
+    func observeChildKeyPathIgnoresParentUpdates() {
+        let store = Store(ParentState())
+        var received: [Int] = []
+        let cancellable = store.observe(\.child) { received.append($0.count) }
+
+        store.trigger(.setLabel("hello"))
+        store.trigger(.setLabel("world"))
+
+        #expect(store.state.label == "world")
+        #expect(received == [0])
+        _ = cancellable
+    }
+
+    @Test("Observing a key path receives deduplicated updates of that part")
+    func observeKeyPathReceivesUpdates() {
+        let store = Store(ParentState())
+        let child = store.getSubStore(\.child)
+        var received: [Int] = []
+        let cancellable = store.observe(\.child.count) { received.append($0) }
+
+        child.trigger(.increment)
+        child.trigger(.set(1)) // same value – should be filtered
+        store.trigger(.setLabel("hello")) // other part – should be filtered
+        child.trigger(.increment)
+
+        #expect(received == [0, 1, 2])
+        _ = cancellable
+    }
+
+    @Test("Observing a key path on custom scheduler delivers on that queue")
+    func observeKeyPathOnScheduler() async {
+        let store = Store(ParentState())
+        let queue = DispatchQueue(label: "test.keypath.queue")
+        var receivedOnQueue = false
+
+        let cancellable = store.observe(\.label, on: queue) { _ in
+            dispatchPrecondition(condition: .onQueue(queue))
+            receivedOnQueue = true
+        }
+
+        store.trigger(.setLabel("hello"))
+        try? await Task.sleep(for: .milliseconds(100))
+
+        #expect(receivedOnQueue)
+        _ = cancellable
+    }
 }
 
 // MARK: - Reducer Determinism Tests
@@ -209,6 +274,52 @@ struct SubStoreTests {
 
         #expect(parent.state.label == "hello")
         #expect(child.state.count == 10)
+    }
+
+    // MARK: Lifecycle
+
+    @Test("SubStore is released when no longer referenced")
+    func subStoreReleased() {
+        let parent = Store(ParentState())
+        weak var weakChild: Store<CounterState>?
+        do {
+            let child = parent.getSubStore(\.child)
+            weakChild = child
+            child.trigger(.increment)
+        }
+        #expect(weakChild == nil)
+        #expect(parent.state.child.count == 1)
+    }
+
+    @Test("SubStore keeps its parent alive and synchronized")
+    func subStoreKeepsParentAlive() {
+        weak var weakParent: Store<ParentState>?
+        var child: Store<CounterState>?
+        do {
+            let parent = Store(ParentState())
+            weakParent = parent
+            child = parent.getSubStore(\.child)
+        }
+        #expect(weakParent != nil)
+
+        child?.trigger(.set(3))
+        #expect(weakParent?.state.child.count == 3)
+
+        child = nil
+        #expect(weakParent == nil)
+    }
+
+    @Test("Multiple substores stay synchronized after one is released")
+    func multipleSubStores() {
+        let parent = Store(ParentState())
+        let firstChild = parent.getSubStore(\.child)
+        do {
+            let secondChild = parent.getSubStore(\.child)
+            secondChild.trigger(.set(5))
+            #expect(firstChild.state.count == 5)
+        }
+        firstChild.trigger(.increment)
+        #expect(parent.state.child.count == 6)
     }
 }
 

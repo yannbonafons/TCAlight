@@ -28,6 +28,29 @@ public final class Store<State: StateWithActionProtocol> {
         self.subject = .init(initialValue)
     }
     
+    /// Subscribes to deduplicated changes of a part of the state.
+    /// - Parameters:
+    ///   - keyPath: Which subpart of the State is observed
+    ///   - scheduler: Optional scheduler used to receive updates. Defaults to immediate delivery on the current context.
+    ///   - action: Callback invoked on each deduplicated state update.
+    /// - Returns: A cancellable token. Keep a strong reference to continue receiving updates.
+    public func observe<Value: Equatable>(_ keyPath: KeyPath<State, Value>,
+                                          on scheduler: DispatchQueue? = nil,
+                                          _ action: @escaping (Value) -> Void) -> AnyCancellable {
+        let publisher = subject
+            .map(keyPath)
+            .removeDuplicates()
+
+        if let scheduler {
+            return publisher
+                .receive(on: scheduler)
+                .sink(receiveValue: action)
+        } else {
+            return publisher
+                .sink(receiveValue: action)
+        }
+    }
+    
     /// Subscribes to deduplicated state changes.
     /// - Parameters:
     ///   - scheduler: Optional scheduler used to receive updates. Defaults to immediate delivery on the current context.
@@ -35,16 +58,7 @@ public final class Store<State: StateWithActionProtocol> {
     /// - Returns: A cancellable token. Keep a strong reference to continue receiving updates.
     public func observe(on scheduler: DispatchQueue? = nil,
                         _ action: @escaping (State) -> Void) -> AnyCancellable {
-        if let scheduler {
-            subject
-                .removeDuplicates()
-                .receive(on: scheduler)
-                .sink(receiveValue: action)
-        } else {
-            subject
-                .removeDuplicates()
-                .sink(receiveValue: action)
-        }
+        observe(\.self, on: scheduler, action)
     }
     
     /// Applies one or more actions sequentially and publishes the final state if it changed.
@@ -58,6 +72,9 @@ public final class Store<State: StateWithActionProtocol> {
     }
     
     /// Creates a bidirectionally synchronized store scoped to a child state.
+    ///
+    /// Synchronization subscriptions are owned by the returned substore and released with it.
+    /// The substore keeps its parent alive for as long as it exists.
     /// - Parameter stateKeyPath: Writable key path to the child state.
     /// - Returns: A store focused on the selected child state.
     public func getSubStore<SubState: StateWithActionProtocol>(_ stateKeyPath: WritableKeyPath<State, SubState>) -> Store<SubState> {
@@ -75,17 +92,17 @@ public final class Store<State: StateWithActionProtocol> {
             .store(in: &subStore.cancellables)
         
         // Child -> Parent
+        // Both subscriptions are owned by the substore so they are released with it.
+        // The parent is captured strongly: a substore keeps its parent alive (no retain cycle,
+        // since the parent never references the substore), preventing silent desynchronization.
         subStore.subject
             .removeDuplicates()
-            .sink { [weak self] newSub in
-                guard let self else {
-                    return
-                }
-                var current = state
+            .sink { newSub in
+                var current = self.state
                 current[keyPath: stateKeyPath] = newSub
-                send(current)
+                self.send(current)
             }
-            .store(in: &cancellables)
+            .store(in: &subStore.cancellables)
         
         return subStore
     }
